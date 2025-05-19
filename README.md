@@ -1,60 +1,77 @@
-# CodeAlpha_Credit_scoring_model
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import joblib
 
-readme_final = """
-# Credit Scoring Model
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-This project is part of my Machine Learning internship at CodeAlpha.  
-It predicts whether a person is creditworthy based on financial and demographic data.
+# Load dataset
+df = pd.read_csv("german_credit_data.csv")  # Make sure the CSV is in the same folder
 
-## 📌 Objective
-To build a machine learning model that classifies individuals as creditworthy or not using classification algorithms.
+# Drop unnecessary index column if present
+df.drop(columns=['Unnamed: 0'], inplace=True)
 
-## 💻 Technologies Used
-- Python
-- Pandas, NumPy
-- Scikit-learn
-- Random Forest Classifier
-- Matplotlib & Seaborn
-- Joblib
+# Simulate CreditRisk column (1 = good, 0 = bad) — only for demo
+np.random.seed(42)
+df['CreditRisk'] = np.random.choice([0, 1], size=len(df))
 
-## 📂 Dataset
-- Source: A simplified version of the German Credit Data.
-- Note: The `CreditRisk` column (target variable) is randomly generated for demo purposes.
-  In a real-world scenario, you should use actual labeled data.
+# Encode all object (text) columns
+le = LabelEncoder()
+for col in df.select_dtypes(include='object').columns:
+    df[col] = le.fit_transform(df[col])
 
-## 🚀 How to Run
+# Fill missing values with 0 (simple strategy)
+df.fillna(0, inplace=True)
 
-1. Make sure you have Python installed.
-2. Place the dataset file `german_credit_data.csv` in the same directory as the script.
-3. Install required libraries:
-    ```bash
-    pip install pandas numpy matplotlib seaborn scikit-learn joblib
-    ```
+# Features and target
+X = df.drop('CreditRisk', axis=1)
+y = df['CreditRisk']
 
-4. Run the script:
-    ```bash
-    python credit_model.py
-    ```
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-## 📈 Output
-- Prints a clean accuracy score
-- Displays a confusion matrix as a heatmap
-- Shows a full classification report
+# Scale features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-## 📦 Model File
-The trained model is saved as `credit_scoring_model.pkl` and can be loaded for later use.
+# Train model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
 
-## 🎥 Demo
-[Insert your video link here]
+# Predict
+y_pred = model.predict(X_test)
 
-## ✅ Internship Details
-- Internship by CodeAlpha
-- Task: Credit Scoring Model
-"""
+# ========== CLEAN OUTPUT ==========
 
-# Save to file
-readme_path = "/mnt/data/README_Credit_Scoring_Model.md"
-with open(readme_path, "w") as f:
-    f.write(readme_final)
+print("\n" + "="*40)
+print("🔍 MODEL EVALUATION RESULTS")
+print("="*40)
 
-readme_path
+# Accuracy
+acc = accuracy_score(y_test, y_pred)
+print(f"\n✅ Accuracy Score: {acc:.2f}")
+
+# Confusion matrix (with heatmap)
+print("\n🧩 Confusion Matrix:")
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+            xticklabels=["Bad (0)", "Good (1)"],
+            yticklabels=["Bad (0)", "Good (1)"])
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
+
+# Classification report
+print("\n📋 Classification Report:\n")
+print(classification_report(y_test, y_pred, target_names=["Bad Credit (0)", "Good Credit (1)"]))
+
+# Save model
+joblib.dump(model, 'credit_scoring_model.pkl')
+print("\n📦 Model saved as 'credit_scoring_model.pkl'")
+print("="*40)
